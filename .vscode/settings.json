@@ -34,7 +34,17 @@
     "thread": "cpp",
     "future": "cpp",
     "iostream": "cpp",
-    "functional": "cpp"
+    "functional": "cpp",
+    "mutex": "cpp",
+    "ostream": "cpp",
+    "map": "cpp",
+    "memory": "cpp",
+    "system_error": "cpp",
+    "type_traits": "cpp",
+    "vector": "cpp",
+    "xmemory": "cpp",
+    "xstddef": "cpp",
+    "xstring": "cpp"
   },
   "C_Cpp.errorSquiggles": "Disabled"
 }
