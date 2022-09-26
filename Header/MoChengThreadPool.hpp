@@ -9,6 +9,7 @@
 namespace MoChengThreadPool
 {
     using namespace std;
+    using thread = std::jthread;
 
     class Worker;
     class ThreadPool
@@ -30,6 +31,7 @@ namespace MoChengThreadPool
             -> future<decltype(action(args...))>;
 
         void StartWork();
+        void StopWork();
         ~ThreadPool();
     };
 
@@ -37,11 +39,13 @@ namespace MoChengThreadPool
     {
     private:
         thread *worker;
+        bool stopped = false;
 
     public:
         Worker();
 
         void StartWork(ThreadPool *threadPool);
+        void StopWorker(ThreadPool *threadPool);
 
         ~Worker();
     };
@@ -69,16 +73,22 @@ namespace MoChengThreadPool
         auto task = make_shared<packaged_task<returnType()>>(
             bind(forward<decltype(action)>(action), forward<decltype(args)>(args)...));
 
-        this->taskQueue.push([task]()
-                             { (*task)(); });
+        this->taskQueue.emplace([task]()
+                                { (*task)(); });
 
         this->avaliable.notify_one();
 
         return task->get_future();
     }
 
-    ThreadPool::~ThreadPool()
+    ThreadPool::~ThreadPool() = default;
+
+    void ThreadPool::StopWork()
     {
+        for (auto &i : this->workers)
+        {
+            i->StopWorker(this);
+        }
     }
 
     Worker *ThreadPool ::SpawnWorker()
@@ -97,18 +107,23 @@ namespace MoChengThreadPool
     {
 
         worker = new thread(
-            [threadPool]()
+            [threadPool](stop_token st)
             {
                 while (true)
                 {
+                    auto stopped = bind([](ThreadPool *threadPool, stop_token st)
+                                        { return st.stop_requested() || !(threadPool->taskQueue).empty(); },
+                                        threadPool, st);
 
                     function<void()> task;
                     {
-
                         unique_lock<mutex> lock(threadPool->myMutex);
-                        // cout << "lock" << endl;
-                        threadPool->avaliable.wait(lock, [threadPool]
-                                                   { return !(threadPool->taskQueue).empty(); });
+
+                        threadPool->avaliable.wait(lock, stopped);
+                        if (st.stop_requested() && threadPool->taskQueue.empty())
+                        {
+                            break;
+                        }
 
                         task = move(threadPool->taskQueue.front());
 
@@ -119,6 +134,9 @@ namespace MoChengThreadPool
                 }
             });
     }
-
+    void Worker::StopWorker(ThreadPool *threadPool)
+    {
+        this->worker->request_stop();
+    }
 }
 #endif
