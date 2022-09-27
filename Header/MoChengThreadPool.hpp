@@ -15,15 +15,15 @@ namespace MoChengThreadPool
     class ThreadPool
     {
     private:
-        vector<Worker *> workers;
-
+        // vector< Worker *> workers;
+        vector<unique_ptr<Worker>> workers;
         int workerNum;
         mutex myMutex;
         condition_variable avaliable;
 
     public:
         ThreadPool();
-        Worker *SpawnWorker();
+        unique_ptr<Worker> SpawnWorker();
         queue<function<void()>> taskQueue;
         friend Worker;
 
@@ -38,13 +38,14 @@ namespace MoChengThreadPool
     class Worker
     {
     private:
-        thread *worker;
+        unique_ptr<thread> workerThread;
         bool stopped = false;
 
     public:
         Worker();
 
         void StartWork(ThreadPool *threadPool);
+
         void StopWorker(ThreadPool *threadPool);
 
         ~Worker();
@@ -57,12 +58,11 @@ namespace MoChengThreadPool
     }
     void ThreadPool::StartWork()
     {
-        cout << "123" << endl;
+        cout << "start" << endl;
         for (size_t i = 0; i < (size_t)this->workerNum; i++)
         {
-            workers.push_back(this->SpawnWorker());
+            workers.emplace_back(move(this->SpawnWorker()));
         }
-        // this->StartWork();
     }
 
     auto ThreadPool::Run(auto &&action, auto &&...args)
@@ -91,11 +91,12 @@ namespace MoChengThreadPool
         }
     }
 
-    Worker *ThreadPool ::SpawnWorker()
+    unique_ptr<Worker> ThreadPool ::SpawnWorker()
     {
-        Worker *worker = new Worker();
+        auto worker = make_unique<Worker>();
 
         worker->StartWork(this);
+
         return worker;
     }
 
@@ -106,7 +107,7 @@ namespace MoChengThreadPool
     void Worker::StartWork(ThreadPool *threadPool)
     {
 
-        worker = new thread(
+        auto threadPtr = make_unique<thread>(
             [threadPool](stop_token st)
             {
                 while (true)
@@ -132,11 +133,15 @@ namespace MoChengThreadPool
 
                     task();
                 }
-            });
+            }
+
+        );
+
+        this->workerThread = move(threadPtr);
     }
     void Worker::StopWorker(ThreadPool *threadPool)
     {
-        this->worker->request_stop();
+        this->workerThread->request_stop();
     }
 }
 #endif

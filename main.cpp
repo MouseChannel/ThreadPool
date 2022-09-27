@@ -26,7 +26,8 @@ int main()
 
     auto res = r->Run([i](int a)
                       {    
-      cout << "cur   "<<i<<"     "<<a  << endl;
+      // cout << "cur   "<<i<<"     "<<a  << endl;
+      cout<<this_thread::get_id()<<endl;
       this_thread::sleep_for(chrono::seconds(a)); },
                       1);
 
@@ -34,7 +35,7 @@ int main()
     // f.push_back(move(res1));
   }
 
-  for (size_t i = 0; i < 3; i++)
+  for (size_t i = 0; i < 0; i++)
   {
     cout << endl
          << r->taskQueue.size() << endl
