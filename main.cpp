@@ -15,8 +15,10 @@ using namespace std;
 int main()
 {
 
-  MoChengThreadPool::ThreadPool *r = new MoChengThreadPool::ThreadPool;
-  r->StartWork();
+  auto r = make_shared<MoChengThreadPool::ThreadPool>();
+  // make_shared<MoChengThreadPool::ThreadPool>(1, []()
+  //                                            { MoChengThreadPool::ThreadPool::DeletePool(); });
+  r->Start();
   vector<future<void>> f;
 
   this_thread::sleep_for(chrono::seconds(2));
@@ -29,31 +31,24 @@ int main()
       // cout << "cur   "<<i<<"     "<<a  << endl;
       cout<<this_thread::get_id()<<endl;
       this_thread::sleep_for(chrono::seconds(a)); },
-                      1);
+                      2);
 
     f.push_back(move(res));
     // f.push_back(move(res1));
+    // this_thread::sleep_for(chrono::milliseconds(50));
   }
 
-  for (size_t i = 0; i < 0; i++)
-  {
-    cout << endl
-         << r->taskQueue.size() << endl
-         << endl;
-    auto res = r->Run([i](double a)
-                      {
-      cout << "cur   "<<i<<"     "  << endl;
-      this_thread::sleep_for(chrono::seconds(1)); },
-                      1.1);
-    f.push_back(move(res));
-  }
+  // this_thread::sleep_for(chrono::milliseconds(1000));
 
-  this_thread::sleep_for(chrono::milliseconds(100));
-  r->StopWork();
   cout << "here" << endl;
-  for (auto &i : f)
-  {
+  cout << "usecount   " << r.use_count() << endl;
+  this_thread::sleep_for(chrono::milliseconds(3000));
 
-    i.get();
-  }
+  cout << "exist Tasks: ------------------------------  " << r  << endl;
+  // for (auto &i : f)
+  // {
+
+  //   i.get();
+  // }
+  // auto e = make_unique<MoChengThreadPool::Worker>();
 }

@@ -11,27 +11,29 @@ namespace MoChengThreadPool
     using namespace std;
     using thread = std::jthread;
 
-    class Worker;
-    class ThreadPool
+    // class Worker;
+    class ThreadPool 
     {
     private:
-        // vector< Worker *> workers;
-        vector<unique_ptr<Worker>> workers;
-        int workerNum;
-        mutex myMutex;
         condition_variable avaliable;
+        mutex myMutex;
+        queue<function<void()>> taskQueue;
+        unique_ptr<thread> workerThread;
+
+        int workerNum;
+
+        vector<unique_ptr<thread>> workers;
 
     public:
         ThreadPool();
-        unique_ptr<Worker> SpawnWorker();
-        queue<function<void()>> taskQueue;
-        friend Worker;
 
         auto Run(auto &&action, auto &&...args)
             -> future<decltype(action(args...))>;
 
-        void StartWork();
-        void StopWork();
+        void Start();
+        void StartSingleWorker();
+        void StopWorks();
+        void StopSingleWorker();
         ~ThreadPool();
     };
 
@@ -41,12 +43,14 @@ namespace MoChengThreadPool
         unique_ptr<thread> workerThread;
         bool stopped = false;
 
+        weak_ptr<ThreadPool> threadPool;
+
     public:
         Worker();
 
-        void StartWork(ThreadPool *threadPool);
+        void StartWork(weak_ptr<ThreadPool> threadPool);
 
-        void StopWorker(ThreadPool *threadPool);
+        void StopWorker();
 
         ~Worker();
     };
@@ -56,13 +60,56 @@ namespace MoChengThreadPool
         this->workerNum = thread::hardware_concurrency();
         cout << "worker == " << this->workerNum << endl;
     }
-    void ThreadPool::StartWork()
+    void ThreadPool::Start()
     {
         cout << "start" << endl;
+
         for (size_t i = 0; i < (size_t)this->workerNum; i++)
         {
-            workers.emplace_back(move(this->SpawnWorker()));
+
+            StartSingleWorker();
         }
+        cout << "vector size = " << workers.size() << endl;
+    }
+    void ThreadPool::StartSingleWorker()
+    {
+        auto threadPtr =
+            make_unique<thread>(
+                [this](stop_token st)
+                {
+                    while (true)
+                    {
+
+                        auto stopped = bind([this](stop_token st)
+                                            { return st.stop_requested() || !(this->taskQueue).empty(); },
+                                            st);
+
+                        function<void()> task;
+
+                        {
+                            unique_lock<mutex> lock(this->myMutex);
+
+                            this->avaliable.wait(lock, stopped);
+
+                            if (st.stop_requested() && this->taskQueue.empty())
+                            {
+                                cout << "break" << endl;
+                                break;
+                            }
+                            cout << "queue size " << this->taskQueue.size() << endl;
+                            task = move(this->taskQueue.front());
+
+                            this->taskQueue.pop();
+                        }
+
+                        task();
+                    }
+                }
+
+            );
+        
+        this->workers.emplace_back(move(threadPtr));
+         
     }
 
     auto ThreadPool::Run(auto &&action, auto &&...args)
@@ -81,67 +128,26 @@ namespace MoChengThreadPool
         return task->get_future();
     }
 
-    ThreadPool::~ThreadPool() = default;
+    ThreadPool::~ThreadPool()
+    {
+        
+        cout << "thread delete" << endl;
+        this->avaliable.notify_all();
+        this->StopWorks();
+    }
 
-    void ThreadPool::StopWork()
+    void ThreadPool::StopWorks()
     {
         for (auto &i : this->workers)
         {
-            i->StopWorker(this);
+            i->request_stop();
+            
+        }
+        for (auto &i : this->workers)
+        {
+             i->join();
         }
     }
 
-    unique_ptr<Worker> ThreadPool ::SpawnWorker()
-    {
-        auto worker = make_unique<Worker>();
-
-        worker->StartWork(this);
-
-        return worker;
-    }
-
-    Worker::Worker() = default;
-
-    Worker::~Worker() = default;
-
-    void Worker::StartWork(ThreadPool *threadPool)
-    {
-
-        auto threadPtr = make_unique<thread>(
-            [threadPool](stop_token st)
-            {
-                while (true)
-                {
-                    auto stopped = bind([](ThreadPool *threadPool, stop_token st)
-                                        { return st.stop_requested() || !(threadPool->taskQueue).empty(); },
-                                        threadPool, st);
-
-                    function<void()> task;
-                    {
-                        unique_lock<mutex> lock(threadPool->myMutex);
-
-                        threadPool->avaliable.wait(lock, stopped);
-                        if (st.stop_requested() && threadPool->taskQueue.empty())
-                        {
-                            break;
-                        }
-
-                        task = move(threadPool->taskQueue.front());
-
-                        threadPool->taskQueue.pop();
-                    }
-
-                    task();
-                }
-            }
-
-        );
-
-        this->workerThread = move(threadPtr);
-    }
-    void Worker::StopWorker(ThreadPool *threadPool)
-    {
-        this->workerThread->request_stop();
-    }
 }
 #endif
