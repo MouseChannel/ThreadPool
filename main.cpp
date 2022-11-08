@@ -1,54 +1,57 @@
-#include <iostream>
-#include <thread>
-#include <future>
-#include <string>
+
+#include "Header/MoChengThreadPool.hpp"
 #include <chrono>
 #include <functional>
-#include "Header/MoChengThreadPool.hpp"
+#include <future>
+#include <iostream>
+#include <string>
+#include <thread>
 // #include "MoChengThreadPool.cpp"
 #include <future>
 
 #include <chrono>
+#include <tuple>
 
 using namespace std;
 
-int main()
-{
+int main() {
 
-  auto r = make_shared<MoChengThreadPool::ThreadPool>();
-  // make_shared<MoChengThreadPool::ThreadPool>(1, []()
-  //                                            { MoChengThreadPool::ThreadPool::DeletePool(); });
-  r->Start();
+  MoChengThreadPool::ThreadPool p;
+ 
   vector<future<void>> f;
+  for (int i = 0; i < 66; i++) {
+    auto aa = p.Run(
+        [](int a) {
+          this_thread::sleep_for(chrono::seconds(a));
+          std::cout << this_thread::get_id() << endl;
+        },
+        2);
 
-  this_thread::sleep_for(chrono::seconds(2));
-
-  for (size_t i = 0; i < 66; i++)
-  {
-
-    auto res = r->Run([i](int a)
-                      {    
-      // cout << "cur   "<<i<<"     "<<a  << endl;
-      cout<<this_thread::get_id()<<endl;
-      this_thread::sleep_for(chrono::seconds(a)); },
-                      2);
-
-    f.push_back(move(res));
-    // f.push_back(move(res1));
-    // this_thread::sleep_for(chrono::milliseconds(50));
+    f.emplace_back(std::move(aa));
   }
-
-  // this_thread::sleep_for(chrono::milliseconds(1000));
-
-  cout << "here" << endl;
-  cout << "usecount   " << r.use_count() << endl;
-  this_thread::sleep_for(chrono::milliseconds(3000));
-
-  cout << "exist Tasks: ------------------------------  " << r  << endl;
-  // for (auto &i : f)
-  // {
-
+  // for (auto &i : f) {
   //   i.get();
   // }
-  // auto e = make_unique<MoChengThreadPool::Worker>();
 }
+
+// auto r = make_shared<MoChengThreadPool::ThreadPool>();
+//                                            {
+//                                            MoChengThreadPool::ThreadPool::DeletePool();
+//                                            });
+// r->Start();
+// vector<future<void>> f;
+
+// this_thread::sleep_for(chrono::seconds(2));
+
+// for (size_t i = 0; i < 66; i++)
+// {
+
+//   auto res = r->Run([i](int a)
+//                     {
+//     // cout << "cur   "<<i<<"     "<<a  << endl;
+//     cout<<this_thread::get_id()<<endl;
+//     this_thread::sleep_for(chrono::seconds(a)); },
+//                     2);
+
+//   f.push_back(move(res));
+// }

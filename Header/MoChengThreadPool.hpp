@@ -1,153 +1,103 @@
-#include <vector>
-#include <queue>
-#include <thread>
 #include <condition_variable>
 #include <future>
-#ifndef MoCheng_ThreadPool
-#define MoCheng_ThreadPool
+#include <iostream>
+#include <queue>
+#include <thread>
+#include <vector>
 
-namespace MoChengThreadPool
-{
-    using namespace std;
-    using thread = std::jthread;
+namespace MoChengThreadPool {
 
-    // class Worker;
-    class ThreadPool 
-    {
-    private:
-        condition_variable avaliable;
-        mutex myMutex;
-        queue<function<void()>> taskQueue;
-        unique_ptr<thread> workerThread;
+class ThreadPool {
+private:
+  std::condition_variable avaliable;
+  std::mutex myMutex;
+  std::queue<std::function<void()>> taskQueue;
+  bool stopped;
 
-        int workerNum;
+  int workerNum;
 
-        vector<unique_ptr<thread>> workers;
+  std::vector<std::unique_ptr<std::thread>> workers;
+  void StartSingleWorker();
+  void StopWorks();
+  void StopSingleWorker();
 
-    public:
-        ThreadPool();
+public:
+  ThreadPool();
 
-        auto Run(auto &&action, auto &&...args)
-            -> future<decltype(action(args...))>;
+  auto Run(auto &&action, auto &&...args)
+      -> std::future<decltype(action(args...))>;
 
-        void Start();
-        void StartSingleWorker();
-        void StopWorks();
-        void StopSingleWorker();
-        ~ThreadPool();
-    };
+  ~ThreadPool();
+};
 
-    class Worker
-    {
-    private:
-        unique_ptr<thread> workerThread;
-        bool stopped = false;
+ThreadPool::ThreadPool() {
+  this->workerNum = std::thread::hardware_concurrency();
+  for (size_t i = 0; i < (size_t)this->workerNum; i++) {
 
-        weak_ptr<ThreadPool> threadPool;
-
-    public:
-        Worker();
-
-        void StartWork(weak_ptr<ThreadPool> threadPool);
-
-        void StopWorker();
-
-        ~Worker();
-    };
-
-    ThreadPool::ThreadPool()
-    {
-        this->workerNum = thread::hardware_concurrency();
-        cout << "worker == " << this->workerNum << endl;
-    }
-    void ThreadPool::Start()
-    {
-        cout << "start" << endl;
-
-        for (size_t i = 0; i < (size_t)this->workerNum; i++)
-        {
-
-            StartSingleWorker();
-        }
-        cout << "vector size = " << workers.size() << endl;
-    }
-    void ThreadPool::StartSingleWorker()
-    {
-        auto threadPtr =
-            make_unique<thread>(
-                [this](stop_token st)
-                {
-                    while (true)
-                    {
-
-                        auto stopped = bind([this](stop_token st)
-                                            { return st.stop_requested() || !(this->taskQueue).empty(); },
-                                            st);
-
-                        function<void()> task;
-
-                        {
-                            unique_lock<mutex> lock(this->myMutex);
-
-                            this->avaliable.wait(lock, stopped);
-
-                            if (st.stop_requested() && this->taskQueue.empty())
-                            {
-                                cout << "break" << endl;
-                                break;
-                            }
-                            cout << "queue size " << this->taskQueue.size() << endl;
-                            task = move(this->taskQueue.front());
-
-                            this->taskQueue.pop();
-                        }
-
-                        task();
-                    }
-                }
-
-            );
-        
-        this->workers.emplace_back(move(threadPtr));
-         
-    }
-
-    auto ThreadPool::Run(auto &&action, auto &&...args)
-        -> future<decltype(action(args...))>
-    {
-        using returnType = decltype(action(args...));
-
-        auto task = make_shared<packaged_task<returnType()>>(
-            bind(forward<decltype(action)>(action), forward<decltype(args)>(args)...));
-
-        this->taskQueue.emplace([task]()
-                                { (*task)(); });
-
-        this->avaliable.notify_one();
-
-        return task->get_future();
-    }
-
-    ThreadPool::~ThreadPool()
-    {
-        
-        cout << "thread delete" << endl;
-        this->avaliable.notify_all();
-        this->StopWorks();
-    }
-
-    void ThreadPool::StopWorks()
-    {
-        for (auto &i : this->workers)
-        {
-            i->request_stop();
-            
-        }
-        for (auto &i : this->workers)
-        {
-             i->join();
-        }
-    }
-
+    StartSingleWorker();
+  }
 }
-#endif
+
+void ThreadPool::StartSingleWorker() {
+  auto threadPtr = std::make_unique<std::thread>([this]() {
+    while (true) {
+
+      auto stopped = std::bind(
+          [this]() { return this->stopped || !(this->taskQueue).empty(); });
+
+      std::function<void()> task;
+
+      {
+        std::unique_lock<std::mutex> lock(this->myMutex);
+
+        this->avaliable.wait(lock, stopped);
+
+        if (this->stopped && this->taskQueue.empty()) {
+
+          break;
+        }
+
+        task = std::move(this->taskQueue.front());
+
+        this->taskQueue.pop();
+      }
+
+      task();
+    }
+  }
+
+  );
+
+  this->workers.emplace_back(std::move(threadPtr));
+}
+
+auto ThreadPool::Run(auto &&action, auto &&...args)
+    -> std::future<decltype(action(args...))> {
+  using returnType = decltype(action(args...));
+
+  auto task = make_shared<std::packaged_task<returnType()>>(
+      std::bind(std::forward<decltype(action)>(action),
+                std::forward<decltype(args)>(args)...));
+
+  this->taskQueue.emplace([task]() { (*task)(); });
+
+  this->avaliable.notify_one();
+
+  return task->get_future();
+}
+
+ThreadPool::~ThreadPool() {
+
+  std::cout << "thread delete" << std::endl;
+  this->avaliable.notify_all();
+  this->StopWorks();
+}
+
+void ThreadPool::StopWorks() {
+  this->stopped = true;
+  for (auto &i : this->workers) {
+    i->join();
+  }
+}
+
+} // namespace MoChengThreadPool

@@ -1,0 +1,129 @@
+{
+	"kind" : "toolchains",
+	"toolchains" : 
+	[
+		{
+			"compiler" : 
+			{
+				"id" : "Clang",
+				"implicit" : 
+				{
+					"includeDirectories" : 
+					[
+						"D:/SomeSoft/LLVM_MINGW/lib/clang/15.0.0/include",
+						"D:/SomeSoft/LLVM_MINGW/include"
+					],
+					"linkDirectories" : 
+					[
+						"D:/SomeSoft/LLVM_MINGW/x86_64-w64-mingw32/lib",
+						"D:/SomeSoft/LLVM_MINGW/x86_64-w64-mingw32/mingw/lib",
+						"D:/SomeSoft/LLVM_MINGW/lib",
+						"D:/SomeSoft/LLVM_MINGW/x86_64-w64-mingw32/sys-root/mingw/lib",
+						"D:/SomeSoft/LLVM_MINGW/lib/clang/15.0.0/lib/windows"
+					],
+					"linkFrameworkDirectories" : [],
+					"linkLibraries" : 
+					[
+						"mingw32",
+						"unwind",
+						"moldname",
+						"mingwex",
+						"advapi32",
+						"shell32",
+						"user32",
+						"kernel32",
+						"mingw32",
+						"unwind",
+						"moldname",
+						"mingwex",
+						"kernel32"
+					]
+				},
+				"path" : "D:/SomeSoft/LLVM_MINGW/bin/clang.exe",
+				"version" : "15.0.0"
+			},
+			"language" : "C",
+			"sourceFileExtensions" : 
+			[
+				"c",
+				"m"
+			]
+		},
+		{
+			"compiler" : 
+			{
+				"id" : "Clang",
+				"implicit" : 
+				{
+					"includeDirectories" : 
+					[
+						"D:/SomeSoft/LLVM_MINGW/include/c++/v1",
+						"D:/SomeSoft/LLVM_MINGW/lib/clang/15.0.0/include",
+						"D:/SomeSoft/LLVM_MINGW/include"
+					],
+					"linkDirectories" : 
+					[
+						"D:/SomeSoft/LLVM_MINGW/x86_64-w64-mingw32/lib",
+						"D:/SomeSoft/LLVM_MINGW/x86_64-w64-mingw32/mingw/lib",
+						"D:/SomeSoft/LLVM_MINGW/lib",
+						"D:/SomeSoft/LLVM_MINGW/x86_64-w64-mingw32/sys-root/mingw/lib",
+						"D:/SomeSoft/LLVM_MINGW/lib/clang/15.0.0/lib/windows"
+					],
+					"linkFrameworkDirectories" : [],
+					"linkLibraries" : 
+					[
+						"c++",
+						"mingw32",
+						"unwind",
+						"moldname",
+						"mingwex",
+						"advapi32",
+						"shell32",
+						"user32",
+						"kernel32",
+						"mingw32",
+						"unwind",
+						"moldname",
+						"mingwex",
+						"kernel32"
+					]
+				},
+				"path" : "D:/SomeSoft/LLVM_MINGW/bin/clang++.exe",
+				"version" : "15.0.0"
+			},
+			"language" : "CXX",
+			"sourceFileExtensions" : 
+			[
+				"C",
+				"M",
+				"c++",
+				"cc",
+				"cpp",
+				"cxx",
+				"mm",
+				"mpp",
+				"CPP",
+				"ixx",
+				"cppm"
+			]
+		},
+		{
+			"compiler" : 
+			{
+				"implicit" : {},
+				"path" : "C:/Users/92072/Downloads/w64devkit-1.16.1/w64devkit/bin/windres.exe"
+			},
+			"language" : "RC",
+			"sourceFileExtensions" : 
+			[
+				"rc",
+				"RC"
+			]
+		}
+	],
+	"version" : 
+	{
+		"major" : 1,
+		"minor" : 0
+	}
+}
